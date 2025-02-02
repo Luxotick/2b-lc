@@ -35,6 +35,16 @@ jobs:
         with:
           name: Artifacts
           path: build/libs/
+          - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }} # Manuel token kullanımı
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
        env:
