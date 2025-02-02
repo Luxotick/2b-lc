@@ -1,2 +1,2 @@
 # 2b-lc
- 2b2t live chat built with mineflayer
+ 2b2t live chat and tab built with headless-mc
