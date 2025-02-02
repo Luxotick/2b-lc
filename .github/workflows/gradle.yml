@@ -35,3 +35,11 @@ jobs:
         with:
           name: Artifacts
           path: build/libs/
+
+       env:
+        GITHUB_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }} # Manuel token kullanımı
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/libs/Artifacts.jar
+        asset_name: Release.jar
+        asset_content_type: application/java-archive
