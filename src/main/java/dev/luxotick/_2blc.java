@@ -1,6 +1,7 @@
 package dev.luxotick;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
@@ -29,6 +30,12 @@ public class _2blc implements ModInitializer {
                     tcpServer.broadcastMessage(gameText);
                 }
         );
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player != null && client.player.isDead()) {
+                client.execute(() -> client.player.requestRespawn());
+            }
+        });
 
         new Thread(() -> {
             while (true) {
