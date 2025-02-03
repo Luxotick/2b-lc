@@ -49,15 +49,15 @@ jobs:
       - name: Determine latest version and build number
         id: version
         run: |
-          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+:build\.[0-9]+$' | head -n 1 || echo "")
+          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+-build\.[0-9]+$' | head -n 1 || echo "")
           
           if [[ -z "$LATEST_TAG" ]]; then
-            NEW_TAG="v1.0.0:build.1"
+            NEW_TAG="v1.0.0-build.1"
           else
             BASE_VERSION=$(echo "$LATEST_TAG" | cut -d':' -f1)
             BUILD_NUMBER=$(echo "$LATEST_TAG" | cut -d'.' -f2)
             NEW_BUILD_NUMBER=$((BUILD_NUMBER + 1))
-            NEW_TAG="${BASE_VERSION}:build.${NEW_BUILD_NUMBER}"
+            NEW_TAG="${BASE_VERSION}-build.${NEW_BUILD_NUMBER}"
           fi
           
           echo "new_tag=$NEW_TAG" >> $GITHUB_ENV
