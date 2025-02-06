@@ -3,48 +3,55 @@ package dev.luxotick;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ConnectScreen;
+import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.network.ServerAddress;
+import net.minecraft.client.network.ServerInfo;
+import net.minecraft.text.Text;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class _2blc implements ModInitializer {
     private TCPChatServer tcpServer;
+    private boolean attemptingReconnect = false;
+    private long lastKickTime = 0;
+    private static final long RECONNECT_DELAY = 30000; // 30 saniye
+
     @Override
     public void onInitialize() {
         tcpServer = new TCPChatServer(9090);
         new Thread(tcpServer).start();
 
         final int ANTI_AFK_INTERVAL_TICKS = 2 * 10;
-        // Number of ticks to simulate forward movement.
         final int MOVE_TICKS = 5;
-
-        // Counter used to simulate holding the forward key.
         AtomicInteger antiAfkMoveTicks = new AtomicInteger();
 
-        ClientReceiveMessageEvents.CHAT.register(
-                ( message,  signedMessage,  sender,  params,  receptionTimestamp) -> {
-                    String chatText = message.getString();
-                    System.out.println("CHAT mesajı: " + chatText);
-                    tcpServer.broadcastMessage(chatText);
-                }
-        );
+        // Chat mesajlarını işleme
+        ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
+            String chatText = message.getString();
+            System.out.println("CHAT mesajı: " + chatText);
+            tcpServer.broadcastMessage(chatText);
+        });
 
-        ClientReceiveMessageEvents.GAME.register(
-                ( message,  params) -> {
-                    String gameText = message.getString();
-                    System.out.println("GAME mesajı: " + gameText);
-                    tcpServer.broadcastMessage(gameText);
-                }
-        );
+        ClientReceiveMessageEvents.GAME.register((message, params) -> {
+            String gameText = message.getString();
+            System.out.println("GAME mesajı: " + gameText);
+            tcpServer.broadcastMessage(gameText);
+        });
 
+        // Ölüm durumunda otomatik respawn
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player != null && client.player.isDead()) {
                 client.execute(() -> client.player.requestRespawn());
             }
         });
 
+        // Tab listesini güncelleme ve TCP sunucusuna gönderme
         new Thread(() -> {
             while (true) {
                 MinecraftClient client = MinecraftClient.getInstance();
@@ -61,32 +68,27 @@ public class _2blc implements ModInitializer {
                     }
                 }
                 try {
-                    Thread.sleep(30000); // Update every 30 seconds
+                    Thread.sleep(30000); // 30 saniyede bir güncelle
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }).start();
 
-        // Anti-AFK routine:
-        // Every ANTI_AFK_INTERVAL_TICKS, perform a small action (jump + slight rotate)
-        // and simulate forward movement for a few ticks to prevent the server from marking
-        // the client as idle.
+        // Anti-AFK sistemi
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player != null) {
                 if (client.player.age % ANTI_AFK_INTERVAL_TICKS == 0) {
                     client.execute(() -> {
                         client.player.jump();
-                        // Rotate the player's view slightly (by 10 degrees).
                         float newYaw = client.player.getYaw() + 10.0F;
                         client.player.setYaw(newYaw);
                         antiAfkMoveTicks.set(MOVE_TICKS);
-                        System.out.println("Performed anti-AFK action (jump, rotate, and move forward).");
+                        System.out.println("Anti-AFK eylemi gerçekleştirildi (zıplama, dönme ve ileri gitme).");
                     });
                 }
 
                 if (antiAfkMoveTicks.get() > 0) {
-                    // Mark the forward key as pressed.
                     client.options.forwardKey.setPressed(true);
                     antiAfkMoveTicks.getAndDecrement();
                     if (antiAfkMoveTicks.get() == 0) {
@@ -95,5 +97,43 @@ public class _2blc implements ModInitializer {
                 }
             }
         });
+
+        // 2b2t'ye otomatik bağlanma
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.getNetworkHandler() == null && !attemptingReconnect) {
+                attemptingReconnect = true;
+                client.execute(() -> connectToServer(client));
+            }
+        });
+
+        // Bağlantı kesildiğinde yeniden bağlanma
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            lastKickTime = System.currentTimeMillis();
+            attemptingReconnect = false;
+            System.out.println("Bağlantı kesildi! Yeniden bağlanılıyor...");
+            new Thread(() -> {
+                try {
+                    Thread.sleep(RECONNECT_DELAY);
+                    connectToServer(MinecraftClient.getInstance());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        });
+    }
+
+    private void connectToServer(MinecraftClient client) {
+        if (System.currentTimeMillis() - lastKickTime < RECONNECT_DELAY) return;
+        System.out.println("2b2t'ye bağlanılıyor...");
+        ServerAddress serverAddress = ServerAddress.parse("2b2t.org:25565");
+        ServerInfo serverInfo = new ServerInfo("2b2t", serverAddress.getAddress(), false);
+        ConnectScreen.connect(
+            client.currentScreen != null ? client.currentScreen : new TitleScreen(),
+            client,
+            serverAddress,
+            serverInfo,
+            false,
+            null
+        );
     }
 }
