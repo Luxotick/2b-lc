@@ -125,6 +125,17 @@ private void connectToServer(MinecraftClient client) {
     if (System.currentTimeMillis() - lastKickTime < RECONNECT_DELAY) return;
     System.out.println("2b2t'ye bağlanılıyor...");
     ServerAddress serverAddress = ServerAddress.parse("2b2t.org:25565");
-    client.getNetworkHandler().connect(serverAddress);
+    ServerInfo serverInfo = new ServerInfo("2b2t", serverAddress.getAddress(), false);
+
+    // Open ConnectScreen to connect to the server
+    client.setScreen(new ConnectScreen(
+        client.currentScreen != null ? client.currentScreen : new TitleScreen(),
+        client,
+        serverAddress,
+        serverInfo,
+        false,
+        null
+    ));
 }
+
 }
