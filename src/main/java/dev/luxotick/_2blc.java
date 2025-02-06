@@ -122,18 +122,10 @@ public class _2blc implements ModInitializer {
         });
     }
 
-    private void connectToServer(MinecraftClient client) {
-        if (System.currentTimeMillis() - lastKickTime < RECONNECT_DELAY) return;
-        System.out.println("2b2t'ye bağlanılıyor...");
-        ServerAddress serverAddress = ServerAddress.parse("2b2t.org:25565");
-        ServerInfo serverInfo = new ServerInfo("2b2t", serverAddress.getAddress(), false);
-        ConnectScreen.connect(
-            client.currentScreen != null ? client.currentScreen : new TitleScreen(),
-            client,
-            serverAddress,
-            serverInfo,
-            false,
-            null
-        );
-    }
+private void connectToServer(MinecraftClient client) {
+    if (System.currentTimeMillis() - lastKickTime < RECONNECT_DELAY) return;
+    System.out.println("2b2t'ye bağlanılıyor...");
+    ServerAddress serverAddress = ServerAddress.parse("2b2t.org:25565");
+    client.getNetworkHandler().connect(serverAddress);
+}
 }
